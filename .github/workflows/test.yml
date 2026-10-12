@@ -1,0 +1,31 @@
+name: Test toolbox
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Check POSIX shell syntax
+        run: |
+          for file in dns.sh toolbox.sh openwrt/dns.sh linux/dns.sh tools/*.sh; do
+            sh -n "$file"
+          done
+      - name: Check generated entry point
+        run: |
+          python3 tools/build-dns.py
+          git diff --exit-code -- dns.sh
+      - name: Test isolated network-manager transactions
+        run: python3 -m unittest discover -s tests -v
+      - name: Smoke-test read-only tools
+        run: |
+          sh tools/system-check.sh
+          sh tools/ports.sh
